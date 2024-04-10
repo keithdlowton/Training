@@ -1,0 +1,13 @@
+------------------------------------
+--- Parameter functions in trees ---
+------------------------------------
+
+max depth: controls the maximum depth or the number of split points the decision can have and it's probably
+the most common parameter used to reduce tree complexity and thus reduce overfitting
+
+min samples: leaf parameter is the threshold that controls what the minimum number of data instances has to
+be in a leaf to avoid splitting it further. This setting also reduces tree complexity.
+
+max leaf: nodes limits the total number of nodes that are leaves of the tree. In effect, setting this 
+parameter will indirectly influence the other two parameters and vice versa. So in practice, adjusting
+only one of these trees is typically enough to control most overfitting.

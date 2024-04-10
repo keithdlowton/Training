@@ -1,0 +1,344 @@
+##############################################
+### Module 1: A simple classification task ###
+##############################################
+
+%matplotlib notebook
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+fruits = pd.read_table('readonly/fruit_data_with_colors.txt')
+
+### create a mapping from fruit label value to fruit name to make results easier to interpret ###
+lookup_fruit_name = dict(zip(fruits.fruit_label.unique(), fruits.fruit_name.unique()))
+lookup_fruit_name
+
+### plotting a scatter matrix ###
+
+from matplotlib import cm
+
+X = fruits[['height', 'width', 'mass', 'color_score']]
+y = fruits['fruit_label']
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+
+### Scatter plot of variables against each other ###
+
+cmap = cm.get_cmap('gnuplot')
+scatter = pd.scatter_matrix(X_train, c= y_train, marker = 'o', s=40, hist_kwds={'bins':15}, figsize=(9,9), cmap=cmap)
+
+### plotting a 3D scatter plot ###
+
+from mpl_toolkits.mplot3d import Axes3D
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection = '3d')
+ax.scatter(X_train['width'], X_train['height'], X_train['color_score'], c = y_train, marker = 'o', s=100)
+# coloured according to y_train fruit values #
+ax.set_xlabel('width')
+ax.set_ylabel('height')
+ax.set_zlabel('color_score')
+plt.show()
+
+### For this example, we use the mass, width, and height features of each fruit instance ###
+
+X = fruits[['mass', 'width', 'height']]
+y = fruits['fruit_label']
+
+### default is 75% / 25% train-test split ###
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+# random_state = random_state is the seed used by the random number generator #
+
+### Create classifier object ###
+
+from sklearn.neighbors import KNeighborsClassifier
+
+knn = KNeighborsClassifier(n_neighbors = 5)
+
+### Train the classifier (fit the estimator) using the training data ###
+
+knn.fit(X_train, y_train)
+
+### Estimate the accuracy of the classifier on future data, using the test data ###
+
+knn.score(X_test, y_test)
+
+### Use the trained k-NN classifier model to classify new, previously unseen objects ###
+
+# first example: a small fruit with mass 20g, width 4.3 cm, height 5.5 cm #
+fruit_prediction = knn.predict([[20, 4.3, 5.5]])
+lookup_fruit_name[fruit_prediction[0]]
+
+# second example: a larger, elongated fruit with mass 100g, width 6.3 cm, height 8.5 cm #
+fruit_prediction = knn.predict([[100, 6.3, 8.5]])
+lookup_fruit_name[fruit_prediction[0]]
+
+### How sensitive is k-NN classification accuracy to the choice of the 'k' parameter? ###
+
+k_range = range(1,20)
+scores = []
+
+for k in k_range:
+    knn = KNeighborsClassifier(n_neighbors = k)
+    knn.fit(X_train, y_train)
+    scores.append(knn.score(X_test, y_test))
+
+# Calculates the accuracy for each of the k clusters #
+
+plt.figure()
+plt.xlabel('k')
+plt.ylabel('accuracy')
+plt.scatter(k_range, scores)
+plt.xticks([0,5,10,15,20]);
+
+### How sensitive is k-NN classification accuracy to the train/test split proportion? ###
+
+t = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2]
+
+knn = KNeighborsClassifier(n_neighbors = 5)
+
+plt.figure()
+
+for s in t:
+
+    scores = []
+    for i in range(1,1000):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 1-s)
+        knn.fit(X_train, y_train)
+        scores.append(knn.score(X_test, y_test))
+    plt.plot(s, np.mean(scores), 'bo')
+
+plt.xlabel('Training set proportion (%)')
+plt.ylabel('accuracy');
+
+------------------------------------------
+--- Kernelized Support Vector Machines ---
+------------------------------------------
+
+--- Classification ---
+
+from sklearn.svm import SVC
+from adspy_shared_utilities import plot_class_regions_for_classifier
+
+X_train, X_test, y_train, y_test = train_test_split(X_D2, y_D2, random_state = 0)
+
+# The default SVC kernel is radial basis function (RBF)
+plot_class_regions_for_classifier(SVC().fit(X_train, y_train),
+                                 X_train, y_train, None, None,
+                                 'Support Vector Classifier: RBF kernel')
+
+# Compare decision boundries with polynomial kernel, degree = 3
+plot_class_regions_for_classifier(SVC(kernel = 'poly', degree = 3)
+                                 .fit(X_train, y_train), X_train,
+                                 y_train, None, None,
+                                 'Support Vector Classifier: Polynomial kernel, degree = 3')
+
+### Support Vector Machine with RBF kernel: gamma parameter ###
+
+from adspy_shared_utilities import plot_class_regions_for_classifier
+
+X_train, X_test, y_train, y_test = train_test_split(X_D2, y_D2, random_state = 0)
+fig, subaxes = plt.subplots(3, 1, figsize=(4, 11))
+
+for this_gamma, subplot in zip([0.01, 1.0, 10.0], subaxes):
+    clf = SVC(kernel = 'rbf', gamma=this_gamma).fit(X_train, y_train)
+    title = 'Support Vector Classifier: \nRBF kernel, gamma = {:.2f}'.format(this_gamma)
+    plot_class_regions_for_classifier_subplot(clf, X_train, y_train,
+                                             None, None, title, subplot)
+    plt.tight_layout()
+
+### Support Vector Machine with RBF kernel: using both C and gamma parameter ###
+
+from sklearn.svm import SVC
+from adspy_shared_utilities import plot_class_regions_for_classifier_subplot
+
+from sklearn.model_selection import train_test_split
+
+
+X_train, X_test, y_train, y_test = train_test_split(X_D2, y_D2, random_state = 0)
+fig, subaxes = plt.subplots(3, 4, figsize=(15, 10), dpi=50)
+
+for this_gamma, this_axis in zip([0.01, 1, 5], subaxes):
+
+    for this_C, subplot in zip([0.1, 1, 15, 250], this_axis):
+        title = 'gamma = {:.2f}, C = {:.2f}'.format(this_gamma, this_C)
+        clf = SVC(kernel = 'rbf', gamma = this_gamma,
+                 C = this_C).fit(X_train, y_train)
+        plot_class_regions_for_classifier_subplot(clf, X_train, y_train,
+                                                 X_test, y_test, title,
+                                                 subplot)
+        plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+
+### Application of SVMs to a real dataset: normalized data with feature preprocessing using minmax scaling ###
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+clf = SVC(C=10).fit(X_train_scaled, y_train)
+print('Breast cancer dataset (normalized with MinMax scaling)')
+print('RBF-kernel SVC (with MinMax scaling) training set accuracy: {:.2f}'
+     .format(clf.score(X_train_scaled, y_train)))
+print('RBF-kernel SVC (with MinMax scaling) test set accuracy: {:.2f}'
+     .format(clf.score(X_test_scaled, y_test)))
+
+------------------------
+### Cross-validation ###
+------------------------
+
+from sklearn.model_selection import cross_val_score
+
+clf = KNeighborsClassifier(n_neighbors = 5)
+X = X_fruits_2d.as_matrix()
+y = y_fruits_2d.as_matrix()
+cv_scores = cross_val_score(clf, X, y)
+
+print('Cross-validation scores (3-fold):', cv_scores)
+print('Mean cross-validation score (3-fold): {:.3f}'
+     .format(np.mean(cv_scores)))
+
+### Validation curve example ###
+
+from sklearn.svm import SVC
+from sklearn.model_selection import validation_curve
+
+param_range = np.logspace(-3, 3, 4)
+train_scores, test_scores = validation_curve(SVC(), X, y,
+                                            param_name='gamma',
+                                            param_range=param_range, cv=3)
+
+# This code based on scikit-learn validation_plot example
+#  See:  http://scikit-learn.org/stable/auto_examples/model_selection/plot_validation_curve.html
+plt.figure()
+
+train_scores_mean = np.mean(train_scores, axis=1)
+train_scores_std = np.std(train_scores, axis=1)
+test_scores_mean = np.mean(test_scores, axis=1)
+test_scores_std = np.std(test_scores, axis=1)
+
+plt.title('Validation Curve with SVM')
+plt.xlabel('$\gamma$ (gamma)')
+plt.ylabel('Score')
+plt.ylim(0.0, 1.1)
+lw = 2
+
+plt.semilogx(param_range, train_scores_mean, label='Training score',
+            color='darkorange', lw=lw)
+
+plt.fill_between(param_range, train_scores_mean - train_scores_std,
+                train_scores_mean + train_scores_std, alpha=0.2,
+                color='darkorange', lw=lw)
+
+plt.semilogx(param_range, test_scores_mean, label='Cross-validation score',
+            color='navy', lw=lw)
+
+plt.fill_between(param_range, test_scores_mean - test_scores_std,
+                test_scores_mean + test_scores_std, alpha=0.2,
+                color='navy', lw=lw)
+
+plt.legend(loc='best')
+plt.show()                                            
+
+----------------------
+--- Decision Trees ---
+----------------------
+
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier
+from adspy_shared_utilities import plot_decision_tree
+from sklearn.model_selection import train_test_split
+
+
+iris = load_iris()
+
+X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state = 3)
+clf = DecisionTreeClassifier().fit(X_train, y_train)
+
+print('Accuracy of Decision Tree classifier on training set: {:.2f}'
+     .format(clf.score(X_train, y_train)))
+print('Accuracy of Decision Tree classifier on test set: {:.2f}'
+     .format(clf.score(X_test, y_test)))
+
+--- Setting max decision tree depth to help avoid overfitting ---
+
+clf2 = DecisionTreeClassifier(max_depth = 3).fit(X_train, y_train)
+
+print('Accuracy of Decision Tree classifier on training set: {:.2f}'
+     .format(clf2.score(X_train, y_train)))
+print('Accuracy of Decision Tree classifier on test set: {:.2f}'
+     .format(clf2.score(X_test, y_test)))
+
+--- Visualizing decision trees ---
+
+plot_decision_tree(clf, iris.feature_names, iris.target_names)
+
+--- Pre-pruned version (max_depth = 3) --
+
+plot_decision_tree(clf2, iris.feature_names, iris.target_names)
+
+--------------------------
+--- Feature importance ---
+--------------------------
+
+from adspy_shared_utilities import plot_feature_importances
+
+plt.figure(figsize=(10,4), dpi=80)
+plot_feature_importances(clf, iris.feature_names)
+plt.show()
+
+print('Feature importances: {}'.format(clf.feature_importances_))
+
+
+from sklearn.tree import DecisionTreeClassifier
+from adspy_shared_utilities import plot_class_regions_for_classifier_subplot
+
+X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state = 0)
+fig, subaxes = plt.subplots(6, 1, figsize=(6, 32))
+
+pair_list = [[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]]
+tree_max_depth = 4
+
+for pair, axis in zip(pair_list, subaxes):
+    X = X_train[:, pair]
+    y = y_train
+
+    clf = DecisionTreeClassifier(max_depth=tree_max_depth).fit(X, y)
+    title = 'Decision Tree, max_depth = {:d}'.format(tree_max_depth)
+    plot_class_regions_for_classifier_subplot(clf, X, y, None,
+                                             None, title, axis,
+                                             iris.target_names)
+
+    axis.set_xlabel(iris.feature_names[pair[0]])
+    axis.set_ylabel(iris.feature_names[pair[1]])
+
+plt.tight_layout()
+plt.show()
+
+----------------------------------------------
+--- Decision Trees on a real-world dataset ---
+----------------------------------------------
+
+from sklearn.tree import DecisionTreeClassifier
+from adspy_shared_utilities import plot_decision_tree
+from adspy_shared_utilities import plot_feature_importances
+
+X_train, X_test, y_train, y_test = train_test_split(X_cancer, y_cancer, random_state = 0)
+
+clf = DecisionTreeClassifier(max_depth = 4, min_samples_leaf = 8,
+                            random_state = 0).fit(X_train, y_train)
+
+plot_decision_tree(clf, cancer.feature_names, cancer.target_names)
+
+print('Breast cancer dataset: decision tree')
+print('Accuracy of DT classifier on training set: {:.2f}'
+     .format(clf.score(X_train, y_train)))
+print('Accuracy of DT classifier on test set: {:.2f}'
+     .format(clf.score(X_test, y_test)))
+
+plt.figure(figsize=(10,6),dpi=80)
+plot_feature_importances(clf, cancer.feature_names)
+plt.tight_layout()
+
+plt.show()
